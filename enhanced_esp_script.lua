@@ -1,8 +1,14 @@
 --[[
 
-Enhanced ESP Script V2.6
+Enhanced ESP Script V2.7
 Created by RanZx999
 Based on Vcsk's scripts
+
+FIXED:
+- Toggle UI bug completely fixed
+- Added UI size options (Small/Medium/Large)
+- Better mobile support
+- Improved stability
 
 Features:
 - Clean & Simple UI
@@ -11,8 +17,7 @@ Features:
 - Auto Team Detection for Highlights
 - Hitbox Expander
 - Speed & Jump Hack
-- Mobile-Friendly UI
-- Fixed Toggle Bug
+- Resizable UI
 
 ]]
 
@@ -54,6 +59,9 @@ getgenv().SpeedEnabled = false
 getgenv().SpeedValue = 16
 getgenv().JumpEnabled = false
 getgenv().JumpValue = 50
+
+-- UI Settings
+getgenv().UIVisible = true
 
 -- Colors
 local TeamColor = Color3.fromRGB(0, 255, 0)      -- Friendly (Green)
@@ -425,36 +433,73 @@ end)
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Vcsk/UI-Library/main/Source/MyUILib(Unamed).lua"))();
 local Window = Library:Create("RanZx999 ESP Hub")
 
--- Fixed Toggle Button
+-- Store UI reference
+getgenv().MainUI = Window
+
+-- Fixed Toggle Button with Manual Toggle
 local ToggleGui = Instance.new("ScreenGui")
 local Toggle = Instance.new("TextButton")
 
 ToggleGui.Name = "ToggleGui_RanZx"
 ToggleGui.Parent = game.CoreGui
 ToggleGui.ResetOnSpawn = false
+ToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-Toggle.Name = "Toggle"
+Toggle.Name = "ToggleButton"
 Toggle.Parent = ToggleGui
 Toggle.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Toggle.BackgroundTransparency = 0.3
+Toggle.BackgroundTransparency = 0.2
 Toggle.BorderSizePixel = 0
-Toggle.Position = UDim2.new(0, 10, 0.5, -30)
-Toggle.Size = UDim2.new(0, 120, 0, 60)
+Toggle.Position = UDim2.new(0, 10, 0.5, -40)
+Toggle.Size = UDim2.new(0, 140, 0, 80)
 Toggle.Font = Enum.Font.GothamBold
-Toggle.Text = "RANZX999\nESP HUB"
+Toggle.Text = "RANZX999\nESP HUB\n[CLICK]"
 Toggle.TextColor3 = Color3.fromRGB(255, 60, 60)
-Toggle.TextSize = 16
+Toggle.TextSize = 18
 Toggle.Active = true
 Toggle.Draggable = true
+Toggle.ZIndex = 10
 
 -- Add corner rounding
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
+corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = Toggle
 
--- FIX: Proper toggle function
-Toggle.MouseButton1Click:Connect(function()
-    Library:ToggleUI()
+-- Add glow effect
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(255, 60, 60)
+stroke.Thickness = 2
+stroke.Transparency = 0.5
+stroke.Parent = Toggle
+
+-- PROPER FIX: Manual UI Toggle Function
+local function toggleUI()
+    UIVisible = not UIVisible
+    
+    -- Find and toggle the main UI window
+    local mainUI = game.CoreGui:FindFirstChild("UILibrary")
+    if mainUI then
+        mainUI.Enabled = UIVisible
+        
+        -- Update button text
+        if UIVisible then
+            Toggle.Text = "RANZX999\nESP HUB\n[HIDE]"
+            Toggle.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        else
+            Toggle.Text = "RANZX999\nESP HUB\n[SHOW]"
+            Toggle.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
+        end
+    end
+end
+
+-- Connect toggle button
+Toggle.MouseButton1Click:Connect(toggleUI)
+
+-- Keybind (F key) to toggle
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.F then
+        toggleUI()
+    end
 end)
 
 local ESPTab = Window:Tab("ESP","rbxassetid://12308581351")
@@ -463,7 +508,7 @@ local MovementTab = Window:Tab("Movement","rbxassetid://12296135476")
 local SettingsTab = Window:Tab("Settings","rbxassetid://10734949856")
 
 -- ESP Tab
-ESPTab:InfoLabel("by RanZx999 | Simple & Clean")
+ESPTab:InfoLabel("by RanZx999 | V2.7 - FIXED!")
 ESPTab:Section("━━━ MAIN CONTROLS ━━━")
 
 ESPTab:Toggle("Enable ESP", function(state)
@@ -509,24 +554,24 @@ ESPTab:Toggle("❤️ Health Bars", function(state)
     getgenv().ESPHealth = state
 end)
 
-ESPTab:Toggle("📍 Tracers (Lines)", function(state)
+ESPTab:Toggle("📍 Tracers", function(state)
     getgenv().ESPTracers = state
 end)
 
 ESPTab:Section("━━━ SETTINGS ━━━")
 
-ESPTab:Toggle("Team Check (Hide Friends)", function(state)
+ESPTab:Toggle("Team Check", function(state)
     getgenv().ESPTeamCheck = state
 end)
 
-ESPTab:InfoLabel("Max Distance: 500m - 5000m")
-ESPTab:Slider("Distance Range", 500, 5000, function(value)
+ESPTab:InfoLabel("Distance: 500m - 5000m")
+ESPTab:Slider("Max Distance", 500, 5000, function(value)
     getgenv().MaxESPDistance = value
 end)
 
 -- Hitbox Tab
 HitboxTab:InfoLabel("Hitbox Expander")
-HitboxTab:Section("━━━ MAIN CONTROLS ━━━")
+HitboxTab:Section("━━━ CONTROLS ━━━")
 
 HitboxTab:Toggle("Enable Hitbox", function(state)
     getgenv().HitboxEnabled = state
@@ -546,35 +591,32 @@ HitboxTab:Toggle("Enable Hitbox", function(state)
     end
 end)
 
-HitboxTab:Section("━━━ HITBOX SIZE ━━━")
+HitboxTab:Section("━━━ SIZE ━━━")
 
-HitboxTab:InfoLabel("Size: 1 - 30 (Recommended: 10-15)")
-HitboxTab:Slider("Hitbox Size", 1, 30, function(value)
+HitboxTab:InfoLabel("1-30 (Safe: 10-15)")
+HitboxTab:Slider("Size", 1, 30, function(value)
     getgenv().HitboxSize = value
 end)
 
 HitboxTab:Section("━━━ VISIBILITY ━━━")
 
-HitboxTab:InfoLabel("0 = Invisible | 1 = Visible")
+HitboxTab:InfoLabel("0=Invisible | 1=Visible")
 HitboxTab:Slider("Transparency", 0, 1, function(value)
     getgenv().HitboxTransparency = value
 end)
 
-HitboxTab:Section("━━━ OPTIONS ━━━")
-
-HitboxTab:Toggle("Team Check (Skip Friends)", function(state)
+HitboxTab:Toggle("Team Check", function(state)
     getgenv().HitboxTeamCheck = state
 end)
 
--- Movement Tab (NEW!)
+-- Movement Tab
 MovementTab:InfoLabel("Speed & Jump Hacks")
-MovementTab:Section("━━━ SPEED HACK ━━━")
+MovementTab:Section("━━━ SPEED ━━━")
 
 MovementTab:Toggle("Enable Speed", function(state)
     getgenv().SpeedEnabled = state
     
     if not state then
-        -- Reset to default
         local char = LocalPlayer.Character
         if char then
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -585,18 +627,17 @@ MovementTab:Toggle("Enable Speed", function(state)
     end
 end)
 
-MovementTab:InfoLabel("Speed: 16 - 200 (Default: 16)")
-MovementTab:Slider("Speed Value", 16, 200, function(value)
+MovementTab:InfoLabel("16-200 (Safe: 20-30)")
+MovementTab:Slider("Speed", 16, 200, function(value)
     getgenv().SpeedValue = value
 end)
 
-MovementTab:Section("━━━ JUMP HACK ━━━")
+MovementTab:Section("━━━ JUMP ━━━")
 
 MovementTab:Toggle("Enable Jump", function(state)
     getgenv().JumpEnabled = state
     
     if not state then
-        -- Reset to default
         local char = LocalPlayer.Character
         if char then
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -607,32 +648,28 @@ MovementTab:Toggle("Enable Jump", function(state)
     end
 end)
 
-MovementTab:InfoLabel("Jump: 50 - 300 (Default: 50)")
+MovementTab:InfoLabel("50-300 (Safe: 60-100)")
 MovementTab:Slider("Jump Power", 50, 300, function(value)
     getgenv().JumpValue = value
 end)
 
-MovementTab:Section("━━━ TIPS ━━━")
-MovementTab:InfoLabel("⚠️ High values = Easy to detect!")
-MovementTab:InfoLabel("Safe Speed: 20-30")
-MovementTab:InfoLabel("Safe Jump: 60-100")
+MovementTab:Section("━━━ WARNING ━━━")
+MovementTab:InfoLabel("⚠️ High values = Easy detect!")
 
 -- Settings Tab
-SettingsTab:InfoLabel("Highlight & UI Settings")
-SettingsTab:Section("━━━ CHARACTER HIGHLIGHT ━━━")
+SettingsTab:InfoLabel("Highlight & UI Controls")
+SettingsTab:Section("━━━ HIGHLIGHT ━━━")
 
 SettingsTab:Toggle("Enable Highlight", function(state)
     getgenv().HighlightEnabled = state
     
     if state then
-        -- Create highlights for existing players
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
                 createHighlight(player)
             end
         end
         
-        -- Handle new players
         Players.PlayerAdded:Connect(function(player)
             if HighlightEnabled then
                 repeat wait() until player.Character
@@ -640,7 +677,6 @@ SettingsTab:Toggle("Enable Highlight", function(state)
             end
         end)
         
-        -- Handle character respawn
         for _, player in pairs(Players:GetPlayers()) do
             player.CharacterAdded:Connect(function()
                 if HighlightEnabled then
@@ -650,28 +686,50 @@ SettingsTab:Toggle("Enable Highlight", function(state)
             end)
         end
     else
-        -- Remove all highlights
         for player, _ in pairs(Highlights) do
             removeHighlight(player)
         end
     end
 end)
 
-SettingsTab:Toggle("Auto Team Colors", function(state)
+SettingsTab:Toggle("Auto Team Color", function(state)
     getgenv().HighlightTeamCheck = state
 end)
 
-SettingsTab:InfoLabel("🟢 Green = Teammate")
-SettingsTab:InfoLabel("🔴 Red = Enemy")
+SettingsTab:InfoLabel("🟢=Friend | 🔴=Enemy")
 
-SettingsTab:Section("━━━ UI CONTROLS ━━━")
+SettingsTab:Section("━━━ UI SIZE ━━━")
 
-SettingsTab:Keybind("Toggle UI", Enum.KeyCode.F, function()
-    Library:ToggleUI()
+SettingsTab:Button("Small UI", function()
+    local ui = game.CoreGui:FindFirstChild("UILibrary")
+    if ui and ui:FindFirstChild("Main") then
+        ui.Main.Size = UDim2.new(0, 400, 0, 450)
+    end
+end)
+
+SettingsTab:Button("Medium UI (Default)", function()
+    local ui = game.CoreGui:FindFirstChild("UILibrary")
+    if ui and ui:FindFirstChild("Main") then
+        ui.Main.Size = UDim2.new(0, 500, 0, 550)
+    end
+end)
+
+SettingsTab:Button("Large UI", function()
+    local ui = game.CoreGui:FindFirstChild("UILibrary")
+    if ui and ui:FindFirstChild("Main") then
+        ui.Main.Size = UDim2.new(0, 650, 0, 700)
+    end
+end)
+
+SettingsTab:Section("━━━ CONTROLS ━━━")
+
+SettingsTab:InfoLabel("Press F to toggle UI")
+
+SettingsTab:Button("Close UI (Press F to reopen)", function()
+    toggleUI()
 end)
 
 SettingsTab:Button("Destroy Script", function()
-    -- Clean up everything
     for player, _ in pairs(ESPObjects) do
         removeESP(player)
     end
@@ -680,29 +738,32 @@ SettingsTab:Button("Destroy Script", function()
     end
     
     game.CoreGui:FindFirstChild("ToggleGui_RanZx"):Destroy()
-    Library:DestroyUI()
+    game.CoreGui:FindFirstChild("UILibrary"):Destroy()
 end)
 
 SettingsTab:Section("━━━ INFO ━━━")
-SettingsTab:InfoLabel("Script by: RanZx999")
-SettingsTab:InfoLabel("Version: 2.6")
+SettingsTab:InfoLabel("Script: RanZx999")
+SettingsTab:InfoLabel("Version: 2.7 FIXED")
 SettingsTab:InfoLabel("Status: ✅ Working")
 
--- Startup message
+-- Startup notification
 wait(0.5)
 game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "RanZx999 ESP Hub";
-    Text = "Script loaded! Press F to toggle";
+    Title = "✅ RanZx999 ESP Hub";
+    Text = "V2.7 Loaded! Press F to toggle";
     Duration = 5;
 })
 
 print("=================================")
-print("RanZx999 ESP Hub V2.6 Loaded!")
-print("Press F to toggle UI")
+print("🔥 RanZx999 ESP Hub V2.7 🔥")
 print("=================================")
-print("New Features:")
-print("✅ Fixed toggle bug")
-print("✅ Speed & Jump hacks")
-print("✅ Mobile-friendly sliders")
-print("✅ Better UI organization")
+print("✅ Toggle bug FIXED!")
+print("✅ Press F to show/hide UI")
+print("✅ UI Size options available")
+print("=================================")
+print("Features:")
+print("- ESP (Box/Name/Distance/Health/Tracer)")
+print("- Hitbox Expander")
+print("- Speed & Jump Hack")
+print("- Auto Team Highlight")
 print("=================================")
