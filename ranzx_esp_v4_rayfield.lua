@@ -343,26 +343,53 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Noclip System
-local function updateNoclip()
-    if not NoclipEnabled then return end
+-- Noclip System (Fixed)
+local noclipConnection = nil
+
+local function enableNoclip()
+    if noclipConnection then
+        noclipConnection:Disconnect()
+    end
     
-    local char = LocalPlayer.Character
-    if not char then return end
-    
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
+    noclipConnection = RunService.Stepped:Connect(function()
+        if NoclipEnabled then
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide == true then
+                        part.CanCollide = false
+                    end
+                end
+            end
         end
+    end)
+end
+
+local function disableNoclip()
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
+    end
+    
+    -- Reset collision
+    local char = LocalPlayer.Character
+    if char then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+        
+        -- Fix specific parts
+        if char:FindFirstChild("Head") then char.Head.CanCollide = true end
+        if char:FindFirstChild("Torso") then char.Torso.CanCollide = true end
+        if char:FindFirstChild("UpperTorso") then char.UpperTorso.CanCollide = true end
     end
 end
 
 RunService.Heartbeat:Connect(function()
     if SpeedEnabled or JumpEnabled then
         updateMovement()
-    end
-    if NoclipEnabled then
-        updateNoclip()
     end
 end)
 
@@ -434,7 +461,7 @@ end)
 
 --// RAYFIELD UI CREATION
 local Window = Rayfield:CreateWindow({
-   Name = "RanZx999 ESP Hub V4.1",
+   Name = "RanZx999 ESP Hub V4.2",
    LoadingTitle = "Loading RanZx999 ESP...",
    LoadingSubtitle = "by RanZx999",
    ConfigurationSaving = {
@@ -739,6 +766,7 @@ MovementTab:CreateToggle({
        getgenv().NoclipEnabled = Value
        
        if Value then
+           enableNoclip()
            Rayfield:Notify({
                Title = "Noclip Enabled",
                Content = "Walk through walls!",
@@ -746,22 +774,13 @@ MovementTab:CreateToggle({
                Image = 4483362458,
            })
        else
+           disableNoclip()
            Rayfield:Notify({
                Title = "Noclip Disabled",
                Content = "Normal collision restored",
                Duration = 3,
                Image = 4483362458,
            })
-           
-           -- Reset collision
-           local char = LocalPlayer.Character
-           if char then
-               for _, part in pairs(char:GetDescendants()) do
-                   if part:IsA("BasePart") then
-                       part.CanCollide = true
-                   end
-               end
-           end
        end
    end,
 })
@@ -863,7 +882,7 @@ SettingsTab:CreateButton({
 
 SettingsTab:CreateSection("Information")
 SettingsTab:CreateLabel("Script: RanZx999 ESP Hub")
-SettingsTab:CreateLabel("Version: 4.1 - Rayfield UI")
+SettingsTab:CreateLabel("Version: 4.2 - Noclip Fixed")
 SettingsTab:CreateLabel("Status: ✅ Active")
 SettingsTab:CreateLabel("")
 SettingsTab:CreateLabel("Controls:")
@@ -874,12 +893,12 @@ SettingsTab:CreateLabel("• Minimize: Click [-]")
 Rayfield:LoadConfiguration()
 
 print("=================================")
-print("🔥 RanZx999 ESP Hub V4.1 🔥")
+print("🔥 RanZx999 ESP Hub V4.2 🔥")
 print("UI: Rayfield Premium")
 print("=================================")
 print("✅ Script loaded successfully!")
-print("✅ Team colors FIXED!")
-print("✅ Infinite Jump & Noclip added!")
+print("✅ Noclip FIXED!")
+print("✅ All features working!")
 print("=================================")
 print("Controls:")
 print("• Press Right CTRL to toggle UI")
