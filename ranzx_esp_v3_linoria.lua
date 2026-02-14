@@ -399,7 +399,7 @@ end)
 
 --// UI Creation
 local Window = Library:CreateWindow({
-    Title = 'RanZx999 ESP Hub V3.0',
+    Title = 'RanZx999 ESP Hub V3.1 - Polished',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
@@ -503,10 +503,13 @@ ESPSettings:AddSlider('MaxDistance', {
     Max = 5000,
     Rounding = 0,
     Compact = false,
+    Suffix = 'm',
     Callback = function(Value)
         getgenv().MaxESPDistance = Value
     end
 })
+
+ESPSettings:AddLabel('Current: 2000m'):AddLabel(' ')
 
 -- Hitbox Tab
 local HitboxMain = Tabs.Hitbox:AddLeftGroupbox('Hitbox Expander')
@@ -692,33 +695,80 @@ HighlightBox:AddLabel('🟢 Green = Teammate')
 HighlightBox:AddLabel('🔴 Red = Enemy')
 
 -- Settings Tab
-local MenuGroup = Tabs.Settings:AddLeftGroupbox('Menu')
+local MenuGroup = Tabs.Settings:AddLeftGroupbox('Menu Controls')
 
-MenuGroup:AddButton('Unload Script', function()
-    for player, _ in pairs(ESPObjects) do
-        removeESP(player)
+MenuGroup:AddLabel('UI Keybind:')
+MenuGroup:AddDropdown('UIKeybind', {
+    Values = {'RightShift', 'LeftShift', 'F', 'Insert', 'End', 'Home', 'Delete'},
+    Default = 1,
+    Multi = false,
+    Text = 'Toggle UI Key',
+    Tooltip = 'Choose key to toggle UI',
+    Callback = function(Value)
+        -- Will be handled by keybind system
     end
-    for player, _ in pairs(Highlights) do
-        removeHighlight(player)
-    end
-    Library:Unload()
-end)
+})
 
-MenuGroup:AddLabel('Made by RanZx999'):AddLabel('Version 3.0 - Linoria UI')
+MenuGroup:AddDivider()
+
+MenuGroup:AddButton({
+    Text = 'Close UI',
+    Func = function()
+        Library:OnUnload()
+    end,
+    Tooltip = 'Close the UI (can reopen with keybind)'
+})
+
+MenuGroup:AddButton({
+    Text = 'Unload Script',
+    Func = function()
+        for player, _ in pairs(ESPObjects) do
+            removeESP(player)
+        end
+        for player, _ in pairs(Highlights) do
+            removeHighlight(player)
+        end
+        Library:Unload()
+    end,
+    DoubleClick = true,
+    Tooltip = 'Completely remove script'
+})
+
+MenuGroup:AddLabel(' '):AddLabel('Made by RanZx999'):AddLabel('Version 3.1 - Polished')
+
+local InfoGroup = Tabs.Settings:AddRightGroupbox('Information')
+
+InfoGroup:AddLabel('Script Status: Active')
+InfoGroup:AddLabel('UI Library: Linoria')
+InfoGroup:AddLabel('Version: 3.1')
+InfoGroup:AddDivider()
+InfoGroup:AddLabel('Controls:')
+InfoGroup:AddLabel('• Toggle UI: RightShift (default)')
+InfoGroup:AddLabel('• Drag UI: Hold title bar')
+InfoGroup:AddLabel('• Resize: Drag corners')
 
 Library:SetWatermarkVisibility(true)
-Library:SetWatermark('RanZx999 ESP Hub V3.0 | Linoria UI')
+Library:SetWatermark('RanZx999 ESP Hub V3.1 | Polished UI | Press RightShift')
 
 ThemeManager:SetLibrary(Library)
 ThemeManager:SetFolder('RanZx999ESP')
 ThemeManager:ApplyToTab(Tabs.Settings)
 
-Library:Notify('RanZx999 ESP Hub loaded! Press RIGHT SHIFT to toggle UI', 5)
+Library:Notify('RanZx999 ESP Hub V3.1 loaded! Press RIGHT SHIFT to toggle UI', 5)
 
 print("=================================")
-print("🔥 RanZx999 ESP Hub V3.0 🔥")
-print("UI: Linoria (Clean & Stable)")
+print("🔥 RanZx999 ESP Hub V3.1 🔥")
+print("UI: Linoria (Polished)")
 print("=================================")
-print("Press RIGHT SHIFT to toggle UI")
-print("All features working!")
+print("Controls:")
+print("• Press RIGHT SHIFT to toggle UI")
+print("• Drag title bar to move")
+print("• Close/Minimize buttons on top right")
+print("=================================")
+print("Features:")
+print("✅ ESP with modular toggles")
+print("✅ Hitbox Expander")
+print("✅ Speed & Jump Hack")  
+print("✅ Auto Team Highlight")
+print("✅ Custom UI keybind")
 print("=================================")
