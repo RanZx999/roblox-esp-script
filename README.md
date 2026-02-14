@@ -13,7 +13,7 @@
 Copy and execute this in your executor:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/RanZx999/roblox-esp-script/refs/heads/main/ranzx_esp_v4_rayfield.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/RanZx999/roblox-esp-script/refs/heads/main/ranzx_esp_v4_rayfield.lua?v=4.2"))()
 ```
 
 ---
