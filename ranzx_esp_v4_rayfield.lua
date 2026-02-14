@@ -48,6 +48,8 @@ getgenv().SpeedEnabled = false
 getgenv().SpeedValue = 16
 getgenv().JumpEnabled = false
 getgenv().JumpValue = 50
+getgenv().InfiniteJumpEnabled = false
+getgenv().NoclipEnabled = false
 
 -- Colors
 local TeamColor = Color3.fromRGB(0, 255, 0)
@@ -58,17 +60,17 @@ local NeutralColor = Color3.fromRGB(255, 255, 255)
 local ESPObjects = {}
 
 local function isTeammate(player)
-    if not ESPTeamCheck then return false end
     if not LocalPlayer.Team then return false end
     if not player.Team then return false end
     return player.Team == LocalPlayer.Team
 end
 
 local function getPlayerColor(player)
-    if isTeammate(player) then
-        return TeamColor
+    -- If team check is enabled and player is teammate, return green
+    if ESPTeamCheck and isTeammate(player) then
+        return TeamColor -- Green
     else
-        return EnemyColor
+        return EnemyColor -- Red
     end
 end
 
@@ -164,6 +166,7 @@ local function updateESP()
             continue
         end
         
+        -- Team Check for ESP - hide teammates if enabled
         if ESPTeamCheck and isTeammate(player) then
             espData.Box.Visible = false
             espData.Name.Visible = false
@@ -327,9 +330,39 @@ local function updateMovement()
     end
 end
 
+-- Infinite Jump System
+UserInputService.JumpRequest:Connect(function()
+    if InfiniteJumpEnabled then
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+    end
+end)
+
+-- Noclip System
+local function updateNoclip()
+    if not NoclipEnabled then return end
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+end
+
 RunService.Heartbeat:Connect(function()
     if SpeedEnabled or JumpEnabled then
         updateMovement()
+    end
+    if NoclipEnabled then
+        updateNoclip()
     end
 end)
 
@@ -346,12 +379,13 @@ local function createHighlight(player)
     highlight.FillTransparency = 0.5
     highlight.OutlineTransparency = 0
     
+    -- Set colors based on team
     if HighlightTeamCheck then
         if isTeammate(player) then
-            highlight.FillColor = TeamColor
+            highlight.FillColor = TeamColor -- Green for teammates
             highlight.OutlineColor = TeamColor
         else
-            highlight.FillColor = EnemyColor
+            highlight.FillColor = EnemyColor -- Red for enemies
             highlight.OutlineColor = EnemyColor
         end
     else
@@ -376,14 +410,18 @@ local function updateHighlights()
             continue
         end
         
+        -- Update colors when team check setting changes
         if HighlightTeamCheck then
             if isTeammate(player) then
-                highlight.FillColor = TeamColor
+                highlight.FillColor = TeamColor -- Green
                 highlight.OutlineColor = TeamColor
             else
-                highlight.FillColor = EnemyColor
+                highlight.FillColor = EnemyColor -- Red
                 highlight.OutlineColor = EnemyColor
             end
+        else
+            highlight.FillColor = NeutralColor
+            highlight.OutlineColor = NeutralColor
         end
     end
 end
@@ -396,7 +434,7 @@ end)
 
 --// RAYFIELD UI CREATION
 local Window = Rayfield:CreateWindow({
-   Name = "RanZx999 ESP Hub V4.0",
+   Name = "RanZx999 ESP Hub V4.1",
    LoadingTitle = "Loading RanZx999 ESP...",
    LoadingSubtitle = "by RanZx999",
    ConfigurationSaving = {
@@ -666,6 +704,71 @@ MovementTab:CreateSlider({
 
 MovementTab:CreateLabel("Safe: 60-100 | High: 150-200 | Moon: 250+")
 
+MovementTab:CreateSection("Extra Movement")
+
+MovementTab:CreateToggle({
+   Name = "🚀 Infinite Jump",
+   CurrentValue = false,
+   Flag = "InfiniteJump",
+   Callback = function(Value)
+       getgenv().InfiniteJumpEnabled = Value
+       
+       if Value then
+           Rayfield:Notify({
+               Title = "Infinite Jump Enabled",
+               Content = "Jump in the air unlimited times!",
+               Duration = 3,
+               Image = 4483362458,
+           })
+       else
+           Rayfield:Notify({
+               Title = "Infinite Jump Disabled",
+               Content = "Normal jumping restored",
+               Duration = 3,
+               Image = 4483362458,
+           })
+       end
+   end,
+})
+
+MovementTab:CreateToggle({
+   Name = "👻 Noclip",
+   CurrentValue = false,
+   Flag = "Noclip",
+   Callback = function(Value)
+       getgenv().NoclipEnabled = Value
+       
+       if Value then
+           Rayfield:Notify({
+               Title = "Noclip Enabled",
+               Content = "Walk through walls!",
+               Duration = 3,
+               Image = 4483362458,
+           })
+       else
+           Rayfield:Notify({
+               Title = "Noclip Disabled",
+               Content = "Normal collision restored",
+               Duration = 3,
+               Image = 4483362458,
+           })
+           
+           -- Reset collision
+           local char = LocalPlayer.Character
+           if char then
+               for _, part in pairs(char:GetDescendants()) do
+                   if part:IsA("BasePart") then
+                       part.CanCollide = true
+                   end
+               end
+           end
+       end
+   end,
+})
+
+MovementTab:CreateLabel("⚠️ Warning: High detection risk!")
+MovementTab:CreateLabel("Use at your own risk")
+
 -- Highlight Tab
 local HighlightTab = Window:CreateTab("✨ Highlight", 4483362458)
 HighlightTab:CreateSection("Character Highlight")
@@ -760,7 +863,7 @@ SettingsTab:CreateButton({
 
 SettingsTab:CreateSection("Information")
 SettingsTab:CreateLabel("Script: RanZx999 ESP Hub")
-SettingsTab:CreateLabel("Version: 4.0 - Rayfield UI")
+SettingsTab:CreateLabel("Version: 4.1 - Rayfield UI")
 SettingsTab:CreateLabel("Status: ✅ Active")
 SettingsTab:CreateLabel("")
 SettingsTab:CreateLabel("Controls:")
@@ -771,11 +874,12 @@ SettingsTab:CreateLabel("• Minimize: Click [-]")
 Rayfield:LoadConfiguration()
 
 print("=================================")
-print("🔥 RanZx999 ESP Hub V4.0 🔥")
+print("🔥 RanZx999 ESP Hub V4.1 🔥")
 print("UI: Rayfield Premium")
 print("=================================")
 print("✅ Script loaded successfully!")
-print("✅ All features working!")
+print("✅ Team colors FIXED!")
+print("✅ Infinite Jump & Noclip added!")
 print("=================================")
 print("Controls:")
 print("• Press Right CTRL to toggle UI")
