@@ -343,47 +343,91 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Noclip System (Fixed)
+-- Ultimate Noclip System (Multiple Methods)
 local noclipConnection = nil
+local noclipParts = {}
 
 local function enableNoclip()
+    -- Disconnect old connection if exists
     if noclipConnection then
         noclipConnection:Disconnect()
     end
     
+    -- Method 1: Stepped (most reliable)
     noclipConnection = RunService.Stepped:Connect(function()
-        if NoclipEnabled then
-            local char = LocalPlayer.Character
-            if char then
-                for _, part in pairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide == true then
-                        part.CanCollide = false
-                    end
+        if not NoclipEnabled then return end
+        
+        local char = LocalPlayer.Character
+        if not char then return end
+        
+        -- Get all parts
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                -- Store original CanCollide state
+                if not noclipParts[part] then
+                    noclipParts[part] = part.CanCollide
                 end
+                
+                -- Disable collision
+                part.CanCollide = false
             end
         end
+        
+        -- Force disable on important parts
+        pcall(function()
+            char.Head.CanCollide = false
+            char.Torso.CanCollide = false
+        end)
+        
+        pcall(function()
+            char.UpperTorso.CanCollide = false
+            char.LowerTorso.CanCollide = false
+        end)
+        
+        pcall(function()
+            char.HumanoidRootPart.CanCollide = false
+        end)
     end)
 end
 
 local function disableNoclip()
+    -- Disconnect connection
     if noclipConnection then
         noclipConnection:Disconnect()
         noclipConnection = nil
     end
     
-    -- Reset collision
+    -- Restore collision
+    task.wait(0.1)
+    
     local char = LocalPlayer.Character
     if char then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
+        -- Restore all parts
+        for part, originalState in pairs(noclipParts) do
+            if part and part.Parent then
+                part.CanCollide = originalState
             end
         end
         
-        -- Fix specific parts
-        if char:FindFirstChild("Head") then char.Head.CanCollide = true end
-        if char:FindFirstChild("Torso") then char.Torso.CanCollide = true end
-        if char:FindFirstChild("UpperTorso") then char.UpperTorso.CanCollide = true end
+        -- Clear cache
+        noclipParts = {}
+        
+        -- Force enable on important parts
+        task.wait(0.1)
+        
+        pcall(function()
+            char.Head.CanCollide = true
+            char.Torso.CanCollide = true
+        end)
+        
+        pcall(function()
+            char.UpperTorso.CanCollide = true
+            char.LowerTorso.CanCollide = true  
+        end)
+        
+        pcall(function()
+            char.HumanoidRootPart.CanCollide = false -- This should stay false
+        end)
     end
 end
 
