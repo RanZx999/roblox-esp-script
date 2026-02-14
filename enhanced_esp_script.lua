@@ -1,16 +1,16 @@
 --[[
 
-Enhanced ESP Script
-Modified by AI Assistant
-Based on original by !vcsk0#1516
+Enhanced ESP Script V2.5
+Created by RanZx999
+Based on Vcsk's scripts
 
-New Features:
-- Advanced ESP Box with outlines
-- Distance Indicator
-- Health Bar Display
-- Enhanced Name Tags
-- Team Colors
-- Customizable Colors
+Features:
+- Clean & Simple UI
+- Modular ESP (toggle each feature separately)
+- Line Tracers
+- Auto Team Detection for Highlights
+- Hitbox Expander
+- Optimized Performance
 
 ]]
 
@@ -18,6 +18,7 @@ local CoreGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
 local function isNumber(str)
   if tonumber(str) ~= nil or str == 'inf' then
@@ -25,43 +26,56 @@ local function isNumber(str)
   end
 end
 
--- Hitbox Settings
-getgenv().HitboxSize = 15
-getgenv().HitboxTransparency = 0.9
-getgenv().HitboxStatus = false
-getgenv().TeamCheck = false
-
--- Player Settings
-getgenv().Walkspeed = game:GetService("Players").LocalPlayer.Character.Humanoid.WalkSpeed
-getgenv().Jumppower = game:GetService("Players").LocalPlayer.Character.Humanoid.JumpPower
-getgenv().TPSpeed = 3
-getgenv().TPWalk = false
-
 -- ESP Settings
 getgenv().ESPEnabled = false
-getgenv().ESPBoxes = true
-getgenv().ESPNames = true
-getgenv().ESPDistance = true
-getgenv().ESPHealth = true
-getgenv().ESPTeamColor = true
-getgenv().ESPBoxColor = Color3.fromRGB(255, 255, 255)
-getgenv().ESPTextColor = Color3.fromRGB(255, 255, 255)
-getgenv().MaxESPDistance = 1000
+getgenv().ESPBoxes = false
+getgenv().ESPNames = false
+getgenv().ESPDistance = false
+getgenv().ESPHealth = false
+getgenv().ESPTracers = false
+getgenv().ESPTeamCheck = true
+getgenv().MaxESPDistance = 2000
 
---// Enhanced ESP System
+-- Hitbox Settings
+getgenv().HitboxEnabled = false
+getgenv().HitboxSize = 10
+getgenv().HitboxTransparency = 0.7
+getgenv().HitboxTeamCheck = true
+
+-- Highlight Settings
+getgenv().HighlightEnabled = false
+getgenv().HighlightTeamCheck = true
+
+-- Colors
+local TeamColor = Color3.fromRGB(0, 255, 0)      -- Friendly (Green)
+local EnemyColor = Color3.fromRGB(255, 0, 0)     -- Enemy (Red)
+local NeutralColor = Color3.fromRGB(255, 255, 255) -- Neutral (White)
+
+--// ESP System
 local ESPObjects = {}
 
+local function isTeammate(player)
+    if not ESPTeamCheck then return false end
+    if not LocalPlayer.Team then return false end
+    if not player.Team then return false end
+    return player.Team == LocalPlayer.Team
+end
+
+local function getPlayerColor(player)
+    if isTeammate(player) then
+        return TeamColor
+    else
+        return EnemyColor
+    end
+end
+
 local function createESP(player)
-    if player == Players.LocalPlayer then return end
+    if player == LocalPlayer then return end
     
-    local espFolder = Instance.new("Folder")
-    espFolder.Name = "ESP_" .. player.Name
-    espFolder.Parent = CoreGui
-    
-    -- Box Drawing
+    -- Box
     local box = Drawing.new("Square")
     box.Visible = false
-    box.Color = ESPBoxColor
+    box.Color = NeutralColor
     box.Thickness = 2
     box.Transparency = 1
     box.Filled = false
@@ -69,8 +83,8 @@ local function createESP(player)
     -- Name Tag
     local nameTag = Drawing.new("Text")
     nameTag.Visible = false
-    nameTag.Color = ESPTextColor
-    nameTag.Size = 16
+    nameTag.Color = NeutralColor
+    nameTag.Size = 15
     nameTag.Center = true
     nameTag.Outline = true
     nameTag.OutlineColor = Color3.fromRGB(0, 0, 0)
@@ -79,8 +93,8 @@ local function createESP(player)
     -- Distance Text
     local distanceTag = Drawing.new("Text")
     distanceTag.Visible = false
-    distanceTag.Color = ESPTextColor
-    distanceTag.Size = 14
+    distanceTag.Color = NeutralColor
+    distanceTag.Size = 13
     distanceTag.Center = true
     distanceTag.Outline = true
     distanceTag.OutlineColor = Color3.fromRGB(0, 0, 0)
@@ -89,9 +103,9 @@ local function createESP(player)
     -- Health Bar Background
     local healthBarBG = Drawing.new("Square")
     healthBarBG.Visible = false
-    healthBarBG.Color = Color3.fromRGB(0, 0, 0)
+    healthBarBG.Color = Color3.fromRGB(20, 20, 20)
     healthBarBG.Thickness = 1
-    healthBarBG.Transparency = 0.5
+    healthBarBG.Transparency = 0.8
     healthBarBG.Filled = true
     
     -- Health Bar
@@ -102,15 +116,12 @@ local function createESP(player)
     healthBar.Transparency = 1
     healthBar.Filled = true
     
-    -- Health Text
-    local healthText = Drawing.new("Text")
-    healthText.Visible = false
-    healthText.Color = Color3.fromRGB(255, 255, 255)
-    healthText.Size = 12
-    healthText.Center = true
-    healthText.Outline = true
-    healthText.OutlineColor = Color3.fromRGB(0, 0, 0)
-    healthText.Font = 2
+    -- Tracer Line
+    local tracer = Drawing.new("Line")
+    tracer.Visible = false
+    tracer.Color = NeutralColor
+    tracer.Thickness = 1
+    tracer.Transparency = 1
     
     ESPObjects[player] = {
         Box = box,
@@ -118,8 +129,7 @@ local function createESP(player)
         Distance = distanceTag,
         HealthBarBG = healthBarBG,
         HealthBar = healthBar,
-        HealthText = healthText,
-        Folder = espFolder
+        Tracer = tracer
     }
 end
 
@@ -130,8 +140,7 @@ local function removeESP(player)
         ESPObjects[player].Distance:Remove()
         ESPObjects[player].HealthBarBG:Remove()
         ESPObjects[player].HealthBar:Remove()
-        ESPObjects[player].HealthText:Remove()
-        ESPObjects[player].Folder:Destroy()
+        ESPObjects[player].Tracer:Remove()
         ESPObjects[player] = nil
     end
 end
@@ -154,18 +163,18 @@ local function updateESP()
             espData.Distance.Visible = false
             espData.HealthBarBG.Visible = false
             espData.HealthBar.Visible = false
-            espData.HealthText.Visible = false
+            espData.Tracer.Visible = false
             continue
         end
         
-        -- Team Check
-        if TeamCheck and player.Team == Players.LocalPlayer.Team then
+        -- Team Check for ESP
+        if ESPTeamCheck and isTeammate(player) then
             espData.Box.Visible = false
             espData.Name.Visible = false
             espData.Distance.Visible = false
             espData.HealthBarBG.Visible = false
             espData.HealthBar.Visible = false
-            espData.HealthText.Visible = false
+            espData.Tracer.Visible = false
             continue
         end
         
@@ -178,7 +187,7 @@ local function updateESP()
             espData.Distance.Visible = false
             espData.HealthBarBG.Visible = false
             espData.HealthBar.Visible = false
-            espData.HealthText.Visible = false
+            espData.Tracer.Visible = false
             continue
         end
         
@@ -192,25 +201,21 @@ local function updateESP()
             espData.Distance.Visible = false
             espData.HealthBarBG.Visible = false
             espData.HealthBar.Visible = false
-            espData.HealthText.Visible = false
+            espData.Tracer.Visible = false
             continue
         end
         
         -- Calculate Box Size
-        local scaleFactor = 1 / (distance / 10)
         local boxSize = Vector2.new(2000 / distance, 2500 / distance)
         
-        -- Set Box Color (Team Color or Custom)
-        local boxColor = ESPBoxColor
-        if ESPTeamColor and player.Team then
-            boxColor = player.Team.TeamColor.Color
-        end
+        -- Get Color
+        local playerColor = getPlayerColor(player)
         
         -- Update Box
         if ESPBoxes then
             espData.Box.Size = boxSize
             espData.Box.Position = Vector2.new(rootPos.X - boxSize.X / 2, rootPos.Y - boxSize.Y / 2)
-            espData.Box.Color = boxColor
+            espData.Box.Color = playerColor
             espData.Box.Visible = true
         else
             espData.Box.Visible = false
@@ -219,8 +224,8 @@ local function updateESP()
         -- Update Name Tag
         if ESPNames then
             espData.Name.Text = player.Name
-            espData.Name.Position = Vector2.new(headPos.X, headPos.Y - 30)
-            espData.Name.Color = ESPTeamColor and player.Team and player.Team.TeamColor.Color or ESPTextColor
+            espData.Name.Position = Vector2.new(headPos.X, headPos.Y - 35)
+            espData.Name.Color = playerColor
             espData.Name.Visible = true
         else
             espData.Name.Visible = false
@@ -228,9 +233,9 @@ local function updateESP()
         
         -- Update Distance
         if ESPDistance then
-            espData.Distance.Text = string.format("[%.0f studs]", distance)
-            espData.Distance.Position = Vector2.new(headPos.X, headPos.Y - 45)
-            espData.Distance.Color = ESPTextColor
+            espData.Distance.Text = string.format("[%.0fm]", distance)
+            espData.Distance.Position = Vector2.new(rootPos.X, rootPos.Y + boxSize.Y / 2 + 20)
+            espData.Distance.Color = Color3.fromRGB(200, 200, 200)
             espData.Distance.Visible = true
         else
             espData.Distance.Visible = false
@@ -238,39 +243,47 @@ local function updateESP()
         
         -- Update Health Bar
         if ESPHealth and humanoid then
-            local healthPercent = humanoid.Health / humanoid.MaxHealth
-            local barWidth = boxSize.X
-            local barHeight = 4
+            local healthPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+            local barWidth = 3
+            local barHeight = boxSize.Y
             
             -- Background
             espData.HealthBarBG.Size = Vector2.new(barWidth, barHeight)
-            espData.HealthBarBG.Position = Vector2.new(rootPos.X - boxSize.X / 2, rootPos.Y + boxSize.Y / 2 + 2)
+            espData.HealthBarBG.Position = Vector2.new(rootPos.X - boxSize.X / 2 - 5, rootPos.Y - boxSize.Y / 2)
             espData.HealthBarBG.Visible = true
             
-            -- Health Bar (changes color based on health)
+            -- Health Bar (Green to Red gradient)
             local healthColor = Color3.fromRGB(
                 math.floor(255 * (1 - healthPercent)),
                 math.floor(255 * healthPercent),
                 0
             )
-            espData.HealthBar.Size = Vector2.new(barWidth * healthPercent, barHeight)
-            espData.HealthBar.Position = Vector2.new(rootPos.X - boxSize.X / 2, rootPos.Y + boxSize.Y / 2 + 2)
+            espData.HealthBar.Size = Vector2.new(barWidth, barHeight * healthPercent)
+            espData.HealthBar.Position = Vector2.new(
+                rootPos.X - boxSize.X / 2 - 5,
+                rootPos.Y - boxSize.Y / 2 + barHeight * (1 - healthPercent)
+            )
             espData.HealthBar.Color = healthColor
             espData.HealthBar.Visible = true
-            
-            -- Health Text
-            espData.HealthText.Text = string.format("%d/%d", math.floor(humanoid.Health), math.floor(humanoid.MaxHealth))
-            espData.HealthText.Position = Vector2.new(rootPos.X, rootPos.Y + boxSize.Y / 2 + 10)
-            espData.HealthText.Visible = true
         else
             espData.HealthBarBG.Visible = false
             espData.HealthBar.Visible = false
-            espData.HealthText.Visible = false
+        end
+        
+        -- Update Tracer
+        if ESPTracers then
+            local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+            espData.Tracer.From = screenCenter
+            espData.Tracer.To = Vector2.new(rootPos.X, rootPos.Y)
+            espData.Tracer.Color = playerColor
+            espData.Tracer.Visible = true
+        else
+            espData.Tracer.Visible = false
         end
     end
 end
 
--- Player Added/Removed Events
+-- Player Events
 Players.PlayerAdded:Connect(function(player)
     if ESPEnabled then
         createESP(player)
@@ -281,208 +294,152 @@ Players.PlayerRemoving:Connect(function(player)
     removeESP(player)
 end)
 
---// UI Library
+--// Hitbox System
+local function updateHitboxes()
+    if not HitboxEnabled then return end
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                -- Team Check
+                if HitboxTeamCheck and isTeammate(player) then
+                    hrp.Size = Vector3.new(2, 2, 1)
+                    hrp.Transparency = 1
+                    hrp.Material = "Plastic"
+                else
+                    hrp.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
+                    hrp.Transparency = HitboxTransparency
+                    hrp.Material = "Neon"
+                    hrp.BrickColor = BrickColor.new("Bright red")
+                    hrp.CanCollide = false
+                end
+            end
+        end
+    end
+end
 
+RunService.RenderStepped:Connect(function()
+    if HitboxEnabled then
+        updateHitboxes()
+    end
+end)
+
+--// Highlight System
+local Highlights = {}
+
+local function createHighlight(player)
+    if player == LocalPlayer then return end
+    if not player.Character then return end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Parent = player.Character
+    highlight.Adornee = player.Character
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    
+    -- Team-based colors
+    if HighlightTeamCheck then
+        if isTeammate(player) then
+            highlight.FillColor = TeamColor
+            highlight.OutlineColor = TeamColor
+        else
+            highlight.FillColor = EnemyColor
+            highlight.OutlineColor = EnemyColor
+        end
+    else
+        highlight.FillColor = NeutralColor
+        highlight.OutlineColor = NeutralColor
+    end
+    
+    Highlights[player] = highlight
+end
+
+local function removeHighlight(player)
+    if Highlights[player] then
+        Highlights[player]:Destroy()
+        Highlights[player] = nil
+    end
+end
+
+local function updateHighlights()
+    for player, highlight in pairs(Highlights) do
+        if not player or not player.Parent or not player.Character then
+            removeHighlight(player)
+            continue
+        end
+        
+        if HighlightTeamCheck then
+            if isTeammate(player) then
+                highlight.FillColor = TeamColor
+                highlight.OutlineColor = TeamColor
+            else
+                highlight.FillColor = EnemyColor
+                highlight.OutlineColor = EnemyColor
+            end
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if HighlightEnabled then
+        updateHighlights()
+    end
+end)
+
+--// UI Library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Vcsk/UI-Library/main/Source/MyUILib(Unamed).lua"))();
-local Window = Library:Create("Enhanced ESP Hub")
+local Window = Library:Create("RanZx999 ESP Hub")
 
 local ToggleGui = Instance.new("ScreenGui")
 local Toggle = Instance.new("TextButton")
 
-ToggleGui.Name = "ToggleGui_HE"
+ToggleGui.Name = "ToggleGui_RanZx"
 ToggleGui.Parent = game.CoreGui
 
 Toggle.Name = "Toggle"
 Toggle.Parent = ToggleGui
-Toggle.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
-Toggle.BackgroundTransparency = 0.660
-Toggle.Position = UDim2.new(0, 0, 0.454706937, 0)
-Toggle.Size = UDim2.new(0.0650164187, 0, 0.0888099447, 0)
-Toggle.Font = Enum.Font.SourceSans
-Toggle.Text = "Toggle"
-Toggle.TextScaled = true
-Toggle.TextColor3 = Color3.fromRGB(40, 40, 40)
-Toggle.TextSize = 24.000
-Toggle.TextXAlignment = Enum.TextXAlignment.Left
+Toggle.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Toggle.BackgroundTransparency = 0.3
+Toggle.BorderSizePixel = 0
+Toggle.Position = UDim2.new(0, 10, 0.5, -25)
+Toggle.Size = UDim2.new(0, 100, 0, 50)
+Toggle.Font = Enum.Font.GothamBold
+Toggle.Text = "RanZx999\nESP"
+Toggle.TextColor3 = Color3.fromRGB(255, 50, 50)
+Toggle.TextSize = 14
 Toggle.Active = true
 Toggle.Draggable = true
+
+-- Add corner rounding
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = Toggle
+
 Toggle.MouseButton1Click:connect(function()
     Library:ToggleUI()
 end)
 
-local HomeTab = Window:Tab("Home","rbxassetid://10888331510")
-local PlayerTab = Window:Tab("Players","rbxassetid://12296135476")
-local VisualTab = Window:Tab("ESP Visuals","rbxassetid://12308581351")
+local ESPTab = Window:Tab("ESP","rbxassetid://12308581351")
+local HitboxTab = Window:Tab("Hitbox","rbxassetid://10888331510")
+local SettingsTab = Window:Tab("Settings","rbxassetid://12296135476")
 
-HomeTab:InfoLabel("Enhanced ESP Hub v2.0")
+-- ESP Tab
+ESPTab:InfoLabel("by RanZx999 | Simple & Clean")
+ESPTab:Section("Main Controls")
 
-HomeTab:Section("Hitbox Settings")
-
-HomeTab:TextBox("Hitbox Size", function(value)
-    getgenv().HitboxSize = value
-end)
-
-HomeTab:TextBox("Hitbox Transparency", function(number)
-    getgenv().HitboxTransparency = number
-end)
-
-HomeTab:Section("Main")
-
-HomeTab:Toggle("Hitbox Status", function(state)
-	getgenv().HitboxStatus = state
-    game:GetService('RunService').RenderStepped:connect(function()
-		if HitboxStatus == true and TeamCheck == false then
-			for i,v in next, game:GetService('Players'):GetPlayers() do
-				if v.Name ~= game:GetService('Players').LocalPlayer.Name then
-					pcall(function()
-						v.Character.HumanoidRootPart.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
-						v.Character.HumanoidRootPart.Transparency = HitboxTransparency
-						v.Character.HumanoidRootPart.BrickColor = BrickColor.new("Really black")
-						v.Character.HumanoidRootPart.Material = "Neon"
-						v.Character.HumanoidRootPart.CanCollide = false
-					end)
-				end
-			end
-		elseif HitboxStatus == true and TeamCheck == true then
-			for i,v in next, game:GetService('Players'):GetPlayers() do
-				if game:GetService('Players').LocalPlayer.Team ~= v.Team then
-					pcall(function()
-						v.Character.HumanoidRootPart.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
-						v.Character.HumanoidRootPart.Transparency = HitboxTransparency
-						v.Character.HumanoidRootPart.BrickColor = BrickColor.new("Really black")
-						v.Character.HumanoidRootPart.Material = "Neon"
-						v.Character.HumanoidRootPart.CanCollide = false
-					end)
-				end
-			end
-		else
-		    for i,v in next, game:GetService('Players'):GetPlayers() do
-				if v.Name ~= game:GetService('Players').LocalPlayer.Name then
-					pcall(function()
-						v.Character.HumanoidRootPart.Size = Vector3.new(2,2,1)
-						v.Character.HumanoidRootPart.Transparency = 1
-						v.Character.HumanoidRootPart.BrickColor = BrickColor.new("Medium stone grey")
-						v.Character.HumanoidRootPart.Material = "Plastic"
-						v.Character.HumanoidRootPart.CanCollide = false
-					end)
-				end
-			end
-		end
-	end)
-end)
-
-HomeTab:Toggle("Team Check", function(state)
-    getgenv().TeamCheck = state
-end)
-
-HomeTab:Keybind("Toggle UI", Enum.KeyCode.F, function()
-    Library:ToggleUI()
-end)
-
--- Player Tab
-PlayerTab:TextBox("WalkSpeed", function(value)
-    getgenv().Walkspeed = value
-    pcall(function()
-        game:GetService("Players").LocalPlayer.Character.Humanoid.WalkSpeed = value
-    end)
-end)
-
-PlayerTab:Toggle("Loop WalkSpeed", function(state)
-    getgenv().loopW = state
-    game:GetService("RunService").Heartbeat:Connect(function()
-        if loopW == true then
-            pcall(function()
-                game:GetService("Players").LocalPlayer.Character.Humanoid.WalkSpeed = Walkspeed
-            end)
-        end
-    end)
-end)
-
-PlayerTab:TextBox("JumpPower", function(value)
-    getgenv().Jumppower = value
-    pcall(function()
-        game:GetService("Players").LocalPlayer.Character.Humanoid.JumpPower = value
-    end)
-end)
-
-PlayerTab:Toggle("Loop JumpPower", function(state)
-    getgenv().loopJ = state
-    game:GetService("RunService").Heartbeat:Connect(function()
-        if loopJ == true then
-            pcall(function()
-                game:GetService("Players").LocalPlayer.Character.Humanoid.JumpPower = Jumppower
-            end)
-        end
-    end)
-end)
-
-PlayerTab:TextBox("TP Speed", function(value)
-    getgenv().TPSpeed = value
-end)
-
-PlayerTab:Toggle("TP Walk", function(s)
-    getgenv().TPWalk = s
-    local hb = game:GetService("RunService").Heartbeat
-    local player = game:GetService("Players")
-    local lplr = player.LocalPlayer
-    local chr = lplr.Character
-    local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
-    while getgenv().TPWalk and hb:Wait() and chr and hum and hum.Parent do
-        if hum.MoveDirection.Magnitude > 0 then
-            if getgenv().TPSpeed and isNumber(getgenv().TPSpeed) then
-                chr:TranslateBy(hum.MoveDirection * tonumber(getgenv().TPSpeed))
-            else
-                chr:TranslateBy(hum.MoveDirection)
-            end
-        end
-    end
-end)
-
-PlayerTab:Slider("FOV", game.Workspace.CurrentCamera.FieldOfView, 120, function(v)
-    game.Workspace.CurrentCamera.FieldOfView = v
-end)
-
-PlayerTab:Toggle("Noclip", function(s)
-    getgenv().Noclip = s
-    game:GetService("RunService").Heartbeat:Connect(function()
-        if Noclip == true then
-            game:GetService("RunService").Stepped:wait()
-            game.Players.LocalPlayer.Character.Head.CanCollide = false
-            game.Players.LocalPlayer.Character.Torso.CanCollide = false
-        end
-    end)
-end)
-
-PlayerTab:Toggle("Infinite Jump", function(s)
-    getgenv().InfJ = s
-    game:GetService("UserInputService").JumpRequest:connect(function()
-        if InfJ == true then
-            game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass'Humanoid':ChangeState("Jumping")
-        end
-    end)
-end)
-
-PlayerTab:Button("Rejoin", function()
-    game:GetService("TeleportService"):Teleport(game.PlaceId, game:GetService("Players").LocalPlayer)
-end)
-
--- ESP Visual Tab
-VisualTab:InfoLabel("Advanced ESP System")
-
-VisualTab:Section("Main ESP")
-
-VisualTab:Toggle("Enable ESP", function(state)
+ESPTab:Toggle("Enable ESP", function(state)
     getgenv().ESPEnabled = state
     
     if state then
-        -- Create ESP for all existing players
+        -- Create ESP for existing players
         for _, player in pairs(Players:GetPlayers()) do
-            if player ~= Players.LocalPlayer then
+            if player ~= LocalPlayer then
                 createESP(player)
             end
         end
         
-        -- Start ESP Update Loop
+        -- Start update loop
         RunService.RenderStepped:Connect(function()
             if ESPEnabled then
                 updateESP()
@@ -496,65 +453,139 @@ VisualTab:Toggle("Enable ESP", function(state)
     end
 end)
 
-VisualTab:Section("ESP Features")
+ESPTab:Section("ESP Features")
 
-VisualTab:Toggle("Show Boxes", function(state)
+ESPTab:Toggle("Boxes", function(state)
     getgenv().ESPBoxes = state
 end)
 
-VisualTab:Toggle("Show Names", function(state)
+ESPTab:Toggle("Names", function(state)
     getgenv().ESPNames = state
 end)
 
-VisualTab:Toggle("Show Distance", function(state)
+ESPTab:Toggle("Distance", function(state)
     getgenv().ESPDistance = state
 end)
 
-VisualTab:Toggle("Show Health Bar", function(state)
+ESPTab:Toggle("Health Bars", function(state)
     getgenv().ESPHealth = state
 end)
 
-VisualTab:Toggle("Use Team Colors", function(state)
-    getgenv().ESPTeamColor = state
+ESPTab:Toggle("Tracers (Lines)", function(state)
+    getgenv().ESPTracers = state
 end)
 
-VisualTab:Section("ESP Settings")
+ESPTab:Section("ESP Settings")
 
-VisualTab:Slider("Max ESP Distance", 100, 5000, function(value)
+ESPTab:Toggle("Team Check (Hide Teammates)", function(state)
+    getgenv().ESPTeamCheck = state
+end)
+
+ESPTab:Slider("Max Distance", 500, 5000, function(value)
     getgenv().MaxESPDistance = value
 end)
 
-VisualTab:InfoLabel("Note: ESP works best with Drawing API")
+-- Hitbox Tab
+HitboxTab:InfoLabel("Hitbox Expander")
+HitboxTab:Section("Main Controls")
 
--- Old ESP Fallback
-VisualTab:Section("Fallback ESP (Highlight)")
-
-VisualTab:Toggle("Character Highlight", function(state)
-    getgenv().enabled = state
-    getgenv().filluseteamcolor = true
-    getgenv().outlineuseteamcolor = true
-    getgenv().fillcolor = Color3.new(0, 0, 0)
-    getgenv().outlinecolor = Color3.new(1, 1, 1)
-    getgenv().filltrans = 0.5
-    getgenv().outlinetrans = 0.5
-
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/Vcsk/RobloxScripts/main/Highlight-ESP.lua"))()
+HitboxTab:Toggle("Enable Hitbox", function(state)
+    getgenv().HitboxEnabled = state
+    
+    if not state then
+        -- Reset all hitboxes
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.Size = Vector3.new(2, 2, 1)
+                    hrp.Transparency = 1
+                    hrp.Material = "Plastic"
+                end
+            end
+        end
+    end
 end)
 
--- Game-Specific Features
-if game.PlaceId == 3082002798 then
-    local GamesTab = Window:Tab("Games","rbxassetid://15426471035")
-	GamesTab:InfoLabel("Game: "..game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name)
-	GamesTab:Button("No Cooldown", function()
-	    for i, v in pairs(game:GetService('ReplicatedStorage')['Shared_Modules'].Tools:GetDescendants()) do
-		    if v:IsA('ModuleScript') then
-			    local Module = require(v)
-				Module.DEBOUNCE = 0
-			end
-		end
-	end)
-end
+HitboxTab:Section("Hitbox Settings")
 
-print("Enhanced ESP Script Loaded Successfully!")
+HitboxTab:Slider("Hitbox Size", 1, 30, function(value)
+    getgenv().HitboxSize = value
+end)
+
+HitboxTab:Slider("Transparency", 0, 1, function(value)
+    getgenv().HitboxTransparency = value
+end)
+
+HitboxTab:Toggle("Team Check (Skip Teammates)", function(state)
+    getgenv().HitboxTeamCheck = state
+end)
+
+-- Settings Tab
+SettingsTab:InfoLabel("Highlight & Other Settings")
+SettingsTab:Section("Character Highlight")
+
+SettingsTab:Toggle("Enable Highlight", function(state)
+    getgenv().HighlightEnabled = state
+    
+    if state then
+        -- Create highlights for existing players
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                createHighlight(player)
+            end
+        end
+        
+        -- Handle new players
+        Players.PlayerAdded:Connect(function(player)
+            if HighlightEnabled then
+                repeat wait() until player.Character
+                createHighlight(player)
+            end
+        end)
+        
+        -- Handle character respawn
+        for _, player in pairs(Players:GetPlayers()) do
+            player.CharacterAdded:Connect(function()
+                if HighlightEnabled then
+                    wait(0.5)
+                    createHighlight(player)
+                end
+            end)
+        end
+    else
+        -- Remove all highlights
+        for player, _ in pairs(Highlights) do
+            removeHighlight(player)
+        end
+    end
+end)
+
+SettingsTab:Toggle("Auto Team Colors", function(state)
+    getgenv().HighlightTeamCheck = state
+end)
+
+SettingsTab:InfoLabel("Green = Teammate | Red = Enemy")
+
+SettingsTab:Section("UI Controls")
+
+SettingsTab:Keybind("Toggle UI", Enum.KeyCode.F, function()
+    Library:ToggleUI()
+end)
+
+SettingsTab:Button("Destroy GUI", function()
+    game.CoreGui:FindFirstChild("ToggleGui_RanZx"):Destroy()
+    Library:DestroyUI()
+end)
+
+-- Startup message
+print("=================================")
+print("RanZx999 ESP Hub Loaded!")
 print("Press F to toggle UI")
-print("Features: Box ESP, Distance, Health Bar, Name Tags")
+print("=================================")
+print("Features:")
+print("- Modular ESP (boxes, names, distance, health, tracers)")
+print("- Hitbox Expander")
+print("- Auto Team Detection Highlights")
+print("- Clean & Simple UI")
+print("=================================")
